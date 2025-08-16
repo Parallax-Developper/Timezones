@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Horaires des villes par pays</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background: #fff;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    .grille {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: center;
+      margin: 40px auto;
+      max-width: 900px;
+    }
+    .case-ville {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      min-width: 180px;
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      padding: 20px 12px;
+      transition: box-shadow 0.2s;
+    }
+    .case-ville:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.09);
+    }
+    .ville {
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .pays {
+      font-size: 0.97em;
+      color: #888;
+      margin-bottom: 10px;
+    }
+    .heure-locale {
+      font-size: 1.4em;
+      color: #202020;
+      margin-bottom: 2px;
+    }
+    .maj-btn {
+      margin-top: 8px;
+      font-size: 0.93em;
+      padding: 3px 12px;
+      border: none;
+      background: #e6e6e6;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .maj-btn:hover {
+      background: #d4d4d4;
+    }
+    @media (max-width: 650px) {
+      .grille {
+        gap: 10px;
+      }
+      .case-ville {
+        min-width: 140px;
+        padding: 12px 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grille" id="grille-villes">
+    <!-- Les cases seront injectées ici -->
+  </div>
+  <script>
+    // Liste d'exemples de villes et pays avec leur timezone IANA
+    const villes = [
+      { pays: "France", ville: "Paris", timezone: "Europe/Paris" },
+      { pays: "États-Unis", ville: "New York", timezone: "America/New_York" },
+      { pays: "Japon", ville: "Tokyo", timezone: "Asia/Tokyo" },
+      { pays: "Brésil", ville: "Rio de Janeiro", timezone: "America/Sao_Paulo" },
+      { pays: "Australie", ville: "Sydney", timezone: "Australia/Sydney" },
+      { pays: "Royaume-Uni", ville: "Londres", timezone: "Europe/London" },
+      { pays: "Afrique du Sud", ville: "Le Cap", timezone: "Africa/Johannesburg" },
+      { pays: "Inde", ville: "Mumbai", timezone: "Asia/Kolkata" },
+      { pays: "Russie", ville: "Moscou", timezone: "Europe/Moscow" }
+    ];
+
+    function formatH12(date, tz) {
+      // Format en 12h avec a.m/p.m
+      return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: tz
+      }).replace('AM', 'a.m').replace('PM', 'p.m');
+    }
+
+    function updateTimes() {
+      villes.forEach((item, i) => {
+        const date = new Date();
+        const heure = formatH12(date, item.timezone);
+        document.getElementById('heure-' + i).textContent = heure;
+      });
+    }
+
+    function creerCases() {
+      const grille = document.getElementById('grille-villes');
+      grille.innerHTML = '';
+      villes.forEach((item, i) => {
+        const caseDiv = document.createElement('div');
+        caseDiv.className = 'case-ville';
+        caseDiv.innerHTML = `
+          <div class="ville">${item.ville}</div>
+          <div class="pays">${item.pays}</div>
+          <div class="heure-locale" id="heure-${i}"></div>
+          <button class="maj-btn" onclick="updateTimes()">Mettre à jour</button>
+        `;
+        grille.appendChild(caseDiv);
+      });
+      updateTimes();
+    }
+
+    creerCases();
+    // Mise à jour auto toute les minutes
+    setInterval(updateTimes, 60000);
+  </script>
+</body>
+</html>
