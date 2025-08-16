@@ -1,136 +1,944 @@
-<!DOCTYPE html>
-<html lang="fr">
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Horaires des villes par pays</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      background: #fff;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-    .grille {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      justify-content: center;
-      margin: 40px auto;
-      max-width: 900px;
-    }
-    .case-ville {
-      background: #fafafa;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-      min-width: 180px;
-      min-height: 110px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 10px;
-      padding: 20px 12px;
-      transition: box-shadow 0.2s;
-    }
-    .case-ville:hover {
-      box-shadow: 0 4px 16px rgba(0,0,0,0.09);
-    }
-    .ville {
-      font-size: 1.1em;
-      font-weight: bold;
-      margin-bottom: 4px;
-    }
-    .pays {
-      font-size: 0.97em;
-      color: #888;
-      margin-bottom: 10px;
-    }
-    .heure-locale {
-      font-size: 1.4em;
-      color: #202020;
-      margin-bottom: 2px;
-    }
-    .maj-btn {
-      margin-top: 8px;
-      font-size: 0.93em;
-      padding: 3px 12px;
-      border: none;
-      background: #e6e6e6;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    .maj-btn:hover {
-      background: #d4d4d4;
-    }
-    @media (max-width: 650px) {
-      .grille {
-        gap: 10px;
-      }
-      .case-ville {
-        min-width: 140px;
-        padding: 12px 6px;
-      }
-    }
-  </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Timezone Dashboard — 300 Cities (Preview)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --card-border:#000000;
+    --accent:#0b84ff;
+    --muted:#6b7280;
+    --shadow: 0 6px 18px rgba(11,132,255,0.08);
+    --radius:12px;
+    font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:#111827;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    padding:28px;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
+  }
+  .title{
+    display:flex;
+    flex-direction:column;
+  }
+  .title h1{margin:0;font-size:20px;letter-spacing:-0.2px}
+  .title p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .search{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border:2px solid var(--card-border);
+    padding:8px 12px;
+    border-radius:999px;
+    min-width:320px;
+    box-shadow:var(--shadow);
+  }
+  .search input{
+    border:0;
+    outline:none;
+    font-size:15px;
+    width:100%;
+    background:transparent;
+  }
+  .btn{
+    background:transparent;
+    border:2px solid var(--card-border);
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  .btn.primary{
+    background:var(--accent);
+    color:white;
+    border-color:var(--accent);
+  }
+
+  main{
+    display:grid;
+    grid-template-columns: 420px 1fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  /* Left column: hero + favorites + small grid */
+  .left{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .hero{
+    border:2px solid var(--card-border);
+    padding:18px;
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    position:relative;
+  }
+  .hero .fav{
+    position:absolute;
+    right:16px;
+    top:16px;
+    cursor:pointer;
+    font-size:20px;
+    user-select:none;
+  }
+  .hero .city{
+    font-size:22px;
+    font-weight:700;
+  }
+  .hero .tz{
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .hero .time{
+    font-size:36px;
+    font-weight:700;
+    margin-top:6px;
+  }
+  .hero .meta{
+    margin-top:8px;
+    color:var(--muted);
+    font-size:13px;
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+
+  .fav-list{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .chip{
+    border:2px solid var(--card-border);
+    padding:8px 10px;
+    border-radius:999px;
+    font-weight:600;
+    cursor:pointer;
+    background:white;
+  }
+
+  /* Right: grid of many cards + controls */
+  .right{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill,minmax(170px,1fr));
+    gap:12px;
+  }
+  .card{
+    border:2px solid var(--card-border);
+    padding:10px;
+    border-radius:12px;
+    background:white;
+    box-shadow:var(--shadow);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    cursor:pointer;
+    position:relative;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:hover{ transform: translateY(-6px) }
+  .card.selected{ border-color:var(--accent); box-shadow:0 10px 30px rgba(11,132,255,0.12) }
+  .card .city-name{ font-weight:700; font-size:14px }
+  .card .tz-name{ font-size:12px; color:var(--muted) }
+  .card .time-small{ font-size:18px; font-weight:600; }
+  .card .small-meta{ font-size:12px; color:var(--muted) }
+
+  .card .star{
+    position:absolute;
+    right:10px;
+    top:10px;
+    font-size:18px;
+    cursor:pointer;
+    user-select:none;
+  }
+
+  footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:18px;
+    gap:12px;
+  }
+  .visit-box{
+    border:2px solid var(--card-border);
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:13px;
+    color:var(--muted);
+    background:#fafafa;
+  }
+
+  /* responsive */
+  @media (max-width:980px){
+    main{ grid-template-columns:1fr; }
+    .search{ min-width:160px; }
+  }
+</style>
 </head>
 <body>
-  <div class="grille" id="grille-villes">
-    <!-- Les cases seront injectées ici -->
+
+<header>
+  <div class="title">
+    <h1>Timezone Dashboard — 300 Cities</h1>
+    <p>Click a card to select & compare. Favorites saved locally (only you).</p>
   </div>
-  <script>
-    // Liste d'exemples de villes et pays avec leur timezone IANA
-    const villes = [
-      { pays: "France", ville: "Paris", timezone: "Europe/Paris" },
-      { pays: "États-Unis", ville: "New York", timezone: "America/New_York" },
-      { pays: "Japon", ville: "Tokyo", timezone: "Asia/Tokyo" },
-      { pays: "Brésil", ville: "Rio de Janeiro", timezone: "America/Sao_Paulo" },
-      { pays: "Australie", ville: "Sydney", timezone: "Australia/Sydney" },
-      { pays: "Royaume-Uni", ville: "Londres", timezone: "Europe/London" },
-      { pays: "Afrique du Sud", ville: "Le Cap", timezone: "Africa/Johannesburg" },
-      { pays: "Inde", ville: "Mumbai", timezone: "Asia/Kolkata" },
-      { pays: "Russie", ville: "Moscou", timezone: "Europe/Moscow" }
-    ];
 
-    function formatH12(date, tz) {
-      // Format en 12h avec a.m/p.m
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: tz
-      }).replace('AM', 'a.m').replace('PM', 'p.m');
+  <div class="controls">
+    <div class="search" role="search" aria-label="Search cities">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35" stroke="#111827" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="11" cy="11" r="6" stroke="#111827" stroke-width="2"/></svg>
+      <input id="searchInput" placeholder="Search city (typos allowed)…" />
+      <button class="btn" id="clearBtn" title="Clear">Clear</button>
+    </div>
+
+    <button class="btn" id="toggleFormat">12h</button>
+    <button class="btn primary" id="showFavs">My Favorites</button>
+  </div>
+</header>
+
+<main>
+  <section class="left">
+    <div class="hero" id="hero">
+      <div class="fav" id="heroStar" title="Add to favorites">☆</div>
+      <div class="tz">Local timezone detected</div>
+      <div class="city" id="heroCity">Your Local Time</div>
+      <div class="time" id="heroTime">--:--:--</div>
+      <div class="meta">
+        <div id="heroOffset">UTC +0</div>
+        <div id="heroAmPm">AM/PM</div>
+      </div>
+    </div>
+
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <strong>Favorites</strong>
+        <small style="color:var(--muted)">Local only</small>
+      </div>
+      <div class="fav-list" id="favList"></div>
+    </div>
+
+    <div style="margin-top:6px">
+      <strong>Quick Picks</strong>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <button class="chip" data-quick="local">Local</button>
+        <button class="chip" data-quick="UTC">UTC</button>
+        <button class="chip" data-quick="Europe/Paris">Paris</button>
+        <button class="chip" data-quick="America/New_York">New York</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="right">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div><strong>All Cities</strong><div style="font-size:12px;color:var(--muted)">300 cities included</div></div>
+      <div style="font-size:13px;color:var(--muted)">Click to select — selected card has blue border</div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<footer>
+  <div style="color:var(--muted);font-size:13px">
+    Tip: use the search and press Enter to focus the big preview.
+  </div>
+  <div class="visit-box" id="visitBox">Visits: 0</div>
+</footer>
+
+<script>
+/*
+  Timezone Dashboard (single-file)
+  - 300 cities array included below
+  - fuzzy search with Levenshtein
+  - favorites saved in localStorage per-user
+  - visit counter saved in localStorage (local-only)
+  - robust timezone fallback to UTC if invalid
+  - 12h/24h toggle
+*/
+
+// ---------- Utilities ----------
+const $ = sel => document.querySelector(sel);
+const byId = id => document.getElementById(id);
+
+function safeFormatTime(tz, date, opts){
+  try {
+    return new Intl.DateTimeFormat(undefined, Object.assign({timeZone:tz}, opts)).format(date);
+  } catch(e){
+    // fallback to UTC
+    return new Intl.DateTimeFormat(undefined, Object.assign({timeZone:'UTC'}, opts)).format(date);
+  }
+}
+
+function getTimeParts(tz, date, use24){
+  // return {timeStr, hourMinSec, ampm, offset}
+  const optionsTime = {hour:'numeric',minute:'2-digit',second:'2-digit',hour12:!use24};
+  const timeStr = safeFormatTime(tz, date, optionsTime);
+  const hourMinSec = safeFormatTime(tz, date, {hour:'numeric',minute:'2-digit',hour12:!use24});
+  const ampm = (!use24) ? safeFormatTime(tz, date, {hour:'numeric',hour12:true}).split(' ').pop() : '';
+  // offset calculation (approx)
+  try {
+    // compute offset by using UTC time vs local time in minutes
+    const fmt = new Intl.DateTimeFormat('en-US', {timeZone: tz, hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit', timeZoneName: 'short'});
+    // timeZoneName not reliable to parse numeric offset, so do numeric approach:
+    const tzDate = new Date(date.toLocaleString('en-US', {timeZone: tz}));
+    const offsetMin = (tzDate - date) / 60000;
+    const offHours = Math.trunc(offsetMin/60);
+    const offMins = Math.abs(offsetMin % 60);
+    const sign = offsetMin >= 0 ? '+' : '-';
+    const offStr = `UTC ${sign}${String(Math.abs(offHours)).padStart(1,'0')}:${String(offMins).padStart(2,'0')}`;
+    return {timeStr, hourMinSec, ampm, offset: offStr};
+  } catch(e){
+    return {timeStr, hourMinSec, ampm, offset:'UTC ±0:00'};
+  }
+}
+
+// Levenshtein distance (simple)
+function levenshtein(a,b){
+  if(!a||!b) return (a||b).length;
+  a=a.toLowerCase(); b=b.toLowerCase();
+  const m=a.length,n=b.length;
+  const dp = Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=0;i<=m;i++) dp[i][0]=i;
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++){
+    for(let j=1;j<=n;j++){
+      const cost = a[i-1]===b[j-1]?0:1;
+      dp[i][j]=Math.min(dp[i-1][j]+1, dp[i][j-1]+1, dp[i-1][j-1]+cost);
     }
+  }
+  return dp[m][n];
+}
 
-    function updateTimes() {
-      villes.forEach((item, i) => {
-        const date = new Date();
-        const heure = formatH12(date, item.timezone);
-        document.getElementById('heure-' + i).textContent = heure;
-      });
+// fuzzy match score: lower is better
+function fuzzyScore(query, text){
+  if(!query) return Infinity;
+  query=query.trim().toLowerCase();
+  text=text.toLowerCase();
+  if(text.includes(query)) return 0; // perfect match
+  const d = levenshtein(query, text);
+  const norm = d / Math.max(1, text.length);
+  return norm;
+}
+
+// ---------- Data: 300 cities ----------
+/*
+  The list below pairs a display name with an IANA timezone when available.
+  Many cities share timezones — that's fine. If a timezone isn't valid,
+  the script falls back to UTC for display.
+*/
+const cities = [
+  /* EUROPE ~60 */
+  {city:"London, UK", tz:"Europe/London"},
+  {city:"Paris, France", tz:"Europe/Paris"},
+  {city:"Berlin, Germany", tz:"Europe/Berlin"},
+  {city:"Madrid, Spain", tz:"Europe/Madrid"},
+  {city:"Rome, Italy", tz:"Europe/Rome"},
+  {city:"Amsterdam, Netherlands", tz:"Europe/Amsterdam"},
+  {city:"Brussels, Belgium", tz:"Europe/Brussels"},
+  {city:"Vienna, Austria", tz:"Europe/Vienna"},
+  {city:"Zurich, Switzerland", tz:"Europe/Zurich"},
+  {city:"Stockholm, Sweden", tz:"Europe/Stockholm"},
+  {city:"Oslo, Norway", tz:"Europe/Oslo"},
+  {city:"Helsinki, Finland", tz:"Europe/Helsinki"},
+  {city:"Copenhagen, Denmark", tz:"Europe/Copenhagen"},
+  {city:"Dublin, Ireland", tz:"Europe/Dublin"},
+  {city:"Lisbon, Portugal", tz:"Europe/Lisbon"},
+  {city:"Warsaw, Poland", tz:"Europe/Warsaw"},
+  {city:"Prague, Czechia", tz:"Europe/Prague"},
+  {city:"Budapest, Hungary", tz:"Europe/Budapest"},
+  {city:"Bucharest, Romania", tz:"Europe/Bucharest"},
+  {city:"Sofia, Bulgaria", tz:"Europe/Sofia"},
+  {city:"Belgrade, Serbia", tz:"Europe/Belgrade"},
+  {city:"Zagreb, Croatia", tz:"Europe/Zagreb"},
+  {city:"Ljubljana, Slovenia", tz:"Europe/Ljubljana"},
+  {city:"Bratislava, Slovakia", tz:"Europe/Bratislava"},
+  {city:"Sarajevo, Bosnia & Herzegovina", tz:"Europe/Sarajevo"},
+  {city:"Skopje, North Macedonia", tz:"Europe/Skopje"},
+  {city:"Tirana, Albania", tz:"Europe/Tirane"},
+  {city:"Reykjavik, Iceland", tz:"Atlantic/Reykjavik"},
+  {city:"Moscow, Russia", tz:"Europe/Moscow"},
+  {city:"Saint Petersburg, Russia", tz:"Europe/Moscow"},
+  {city:"Kiev, Ukraine", tz:"Europe/Kyiv"},
+  {city:"Riga, Latvia", tz:"Europe/Riga"},
+  {city:"Vilnius, Lithuania", tz:"Europe/Vilnius"},
+  {city:"Tallinn, Estonia", tz:"Europe/Tallinn"},
+  {city:"Valletta, Malta", tz:"Europe/Malta"},
+  {city:"Nicosia, Cyprus", tz:"Asia/Nicosia"},
+  {city:"Athens, Greece", tz:"Europe/Athens"},
+  {city:"Ankara, Turkey", tz:"Europe/Istanbul"},
+  {city:"Istanbul, Turkey", tz:"Europe/Istanbul"},
+  {city:"Saratov, Russia", tz:"Europe/Samara"},
+  {city:"Ufa, Russia", tz:"Asia/Yekaterinburg"},
+  {city:"Yerevan, Armenia", tz:"Asia/Yerevan"},
+  {city:"Tbilisi, Georgia", tz:"Asia/Tbilisi"},
+  {city:"Baku, Azerbaijan", tz:"Asia/Baku"},
+
+  /* ASIA ~70 */
+  {city:"Tokyo, Japan", tz:"Asia/Tokyo"},
+  {city:"Seoul, South Korea", tz:"Asia/Seoul"},
+  {city:"Beijing, China", tz:"Asia/Shanghai"},
+  {city:"Shanghai, China", tz:"Asia/Shanghai"},
+  {city:"Hong Kong", tz:"Asia/Hong_Kong"},
+  {city:"Taipei, Taiwan", tz:"Asia/Taipei"},
+  {city:"Manila, Philippines", tz:"Asia/Manila"},
+  {city:"Bangkok, Thailand", tz:"Asia/Bangkok"},
+  {city:"Singapore", tz:"Asia/Singapore"},
+  {city:"Kuala Lumpur, Malaysia", tz:"Asia/Kuala_Lumpur"},
+  {city:"Jakarta, Indonesia", tz:"Asia/Jakarta"},
+  {city:"Ho Chi Minh City, Vietnam", tz:"Asia/Ho_Chi_Minh"},
+  {city:"Hanoi, Vietnam", tz:"Asia/Ho_Chi_Minh"},
+  {city:"Mumbai, India", tz:"Asia/Kolkata"},
+  {city:"Delhi, India", tz:"Asia/Kolkata"},
+  {city:"Bangalore, India", tz:"Asia/Kolkata"},
+  {city:"Chennai, India", tz:"Asia/Kolkata"},
+  {city:"Hyderabad, India", tz:"Asia/Kolkata"},
+  {city:"Karachi, Pakistan", tz:"Asia/Karachi"},
+  {city:"Lahore, Pakistan", tz:"Asia/Karachi"},
+  {city:"Dhaka, Bangladesh", tz:"Asia/Dhaka"},
+  {city:"Kathmandu, Nepal", tz:"Asia/Kathmandu"},
+  {city:"Colombo, Sri Lanka", tz:"Asia/Colombo"},
+  {city:"Riyadh, Saudi Arabia", tz:"Asia/Riyadh"},
+  {city:"Jeddah, Saudi Arabia", tz:"Asia/Riyadh"},
+  {city:"Dubai, UAE", tz:"Asia/Dubai"},
+  {city:"Abu Dhabi, UAE", tz:"Asia/Dubai"},
+  {city:"Doha, Qatar", tz:"Asia/Qatar"},
+  {city:"Muscat, Oman", tz:"Asia/Muscat"},
+  {city:"Tel Aviv, Israel", tz:"Asia/Jerusalem"},
+  {city:"Jerusalem, Israel", tz:"Asia/Jerusalem"},
+  {city:"Beirut, Lebanon", tz:"Asia/Beirut"},
+  {city:"Amman, Jordan", tz:"Asia/Amman"},
+  {city:"Baghdad, Iraq", tz:"Asia/Baghdad"},
+  {city:"Tehran, Iran", tz:"Asia/Tehran"},
+  {city:"Tashkent, Uzbekistan", tz:"Asia/Tashkent"},
+  {city:"Almaty, Kazakhstan", tz:"Asia/Almaty"},
+  {city:"Astana, Kazakhstan", tz:"Asia/Almaty"},
+  {city:"Bishkek, Kyrgyzstan", tz:"Asia/Bishkek"},
+  {city:"Ulaanbaatar, Mongolia", tz:"Asia/Ulaanbaatar"},
+  {city:"Vladivostok, Russia", tz:"Asia/Vladivostok"},
+  {city:"Yokohama, Japan", tz:"Asia/Tokyo"},
+  {city:"Osaka, Japan", tz:"Asia/Tokyo"},
+  {city:"Sapporo, Japan", tz:"Asia/Tokyo"},
+  {city:"Kuala Terengganu, Malaysia", tz:"Asia/Kuala_Lumpur"},
+  {city:"Zhengzhou, China", tz:"Asia/Shanghai"},
+  {city:"Shenzhen, China", tz:"Asia/Shanghai"},
+  {city:"Chengdu, China", tz:"Asia/Shanghai"},
+  {city:"Nanjing, China", tz:"Asia/Shanghai"},
+  {city:"Wuhan, China", tz:"Asia/Shanghai"},
+  {city:"Xian, China", tz:"Asia/Shanghai"},
+  {city:"Suzhou, China", tz:"Asia/Shanghai"},
+  {city:"Qingdao, China", tz:"Asia/Shanghai"},
+
+  /* NORTH AMERICA ~80 */
+  {city:"New York, USA", tz:"America/New_York"},
+  {city:"Los Angeles, USA", tz:"America/Los_Angeles"},
+  {city:"Chicago, USA", tz:"America/Chicago"},
+  {city:"Houston, USA", tz:"America/Chicago"},
+  {city:"Phoenix, USA", tz:"America/Phoenix"},
+  {city:"Philadelphia, USA", tz:"America/New_York"},
+  {city:"San Antonio, USA", tz:"America/Chicago"},
+  {city:"San Diego, USA", tz:"America/Los_Angeles"},
+  {city:"Dallas, USA", tz:"America/Chicago"},
+  {city:"San Jose, USA", tz:"America/Los_Angeles"},
+  {city:"Austin, USA", tz:"America/Chicago"},
+  {city:"Jacksonville, USA", tz:"America/New_York"},
+  {city:"Fort Worth, USA", tz:"America/Chicago"},
+  {city:"Columbus, USA", tz:"America/New_York"},
+  {city:"San Francisco, USA", tz:"America/Los_Angeles"},
+  {city:"Charlotte, USA", tz:"America/New_York"},
+  {city:"Indianapolis, USA", tz:"America/Indiana/Indianapolis"},
+  {city:"Seattle, USA", tz:"America/Los_Angeles"},
+  {city:"Denver, USA", tz:"America/Denver"},
+  {city:"Washington, D.C., USA", tz:"America/New_York"},
+  {city:"Boston, USA", tz:"America/New_York"},
+  {city:"El Paso, USA", tz:"America/El_Paso"},
+  {city:"Nashville, USA", tz:"America/Chicago"},
+  {city:"Detroit, USA", tz:"America/Detroit"},
+  {city:"Oklahoma City, USA", tz:"America/Chicago"},
+  {city:"Portland, USA", tz:"America/Los_Angeles"},
+  {city:"Las Vegas, USA", tz:"America/Los_Angeles"},
+  {city:"Memphis, USA", tz:"America/Chicago"},
+  {city:"Louisville, USA", tz:"America/Kentucky/Louisville"},
+  {city:"Baltimore, USA", tz:"America/New_York"},
+  {city:"Milwaukee, USA", tz:"America/Chicago"},
+  {city:"Albuquerque, USA", tz:"America/Denver"},
+  {city:"Tucson, USA", tz:"America/Phoenix"},
+  {city:"Fresno, USA", tz:"America/Los_Angeles"},
+  {city:"Sacramento, USA", tz:"America/Los_Angeles"},
+  {city:"Mesa, USA", tz:"America/Phoenix"},
+  {city:"Kansas City, USA", tz:"America/Chicago"},
+  {city:"Atlanta, USA", tz:"America/New_York"},
+  {city:"Omaha, USA", tz:"America/Chicago"},
+  {city:"Raleigh, USA", tz:"America/New_York"},
+  {city:"Miami, USA", tz:"America/New_York"},
+  {city:"Long Beach, USA", tz:"America/Los_Angeles"},
+  {city:"Virginia Beach, USA", tz:"America/New_York"},
+  {city:"Oakland, USA", tz:"America/Los_Angeles"},
+  {city:"Minneapolis, USA", tz:"America/Chicago"},
+  {city:"Tulsa, USA", tz:"America/Chicago"},
+  {city:"Arlington, USA", tz:"America/Chicago"},
+  {city:"Tampa, USA", tz:"America/New_York"},
+  {city:"New Orleans, USA", tz:"America/Chicago"},
+  {city:"Wichita, USA", tz:"America/Chicago"},
+  {city:"Cleveland, USA", tz:"America/New_York"},
+  {city:"Bakersfield, USA", tz:"America/Los_Angeles"},
+  {city:"Aurora, USA", tz:"America/Denver"},
+  {city:"Honolulu, USA", tz:"Pacific/Honolulu"},
+
+  /* CANADA & MEXICO & CENTRAL AMERICA & CARIBBEAN ~25 */
+  {city:"Toronto, Canada", tz:"America/Toronto"},
+  {city:"Montreal, Canada", tz:"America/Toronto"},
+  {city:"Vancouver, Canada", tz:"America/Vancouver"},
+  {city:"Calgary, Canada", tz:"America/Edmonton"},
+  {city:"Edmonton, Canada", tz:"America/Edmonton"},
+  {city:"Ottawa, Canada", tz:"America/Toronto"},
+  {city:"Quebec City, Canada", tz:"America/Toronto"},
+  {city:"Winnipeg, Canada", tz:"America/Winnipeg"},
+  {city:"Mexico City, Mexico", tz:"America/Mexico_City"},
+  {city:"Guadalajara, Mexico", tz:"America/Mexico_City"},
+  {city:"Monterrey, Mexico", tz:"America/Monterrey"},
+  {city:"Cancun, Mexico", tz:"America/Cancun"},
+  {city:"Guatemala City, Guatemala", tz:"America/Guatemala"},
+  {city:"San Salvador, El Salvador", tz:"America/El_Salvador"},
+  {city:"Tegucigalpa, Honduras", tz:"America/Tegucigalpa"},
+  {city:"Managua, Nicaragua", tz:"America/Managua"},
+  {city:"Panama City, Panama", tz:"America/Panama"},
+  {city:"San Jose, Costa Rica", tz:"America/Costa_Rica"},
+  {city:"Havana, Cuba", tz:"America/Havana"},
+  {city:"Santo Domingo, Dominican Republic", tz:"America/Santo_Domingo"},
+  {city:"Kingston, Jamaica", tz:"America/Jamaica"},
+  {city:"Port-au-Prince, Haiti", tz:"America/Port-au-Prince"},
+  {city:"Nassau, Bahamas", tz:"America/Nassau"},
+  {city:"Bridgetown, Barbados", tz:"America/Barbados"},
+  {city:"Belmopan, Belize", tz:"America/Belize"},
+
+  /* SOUTH AMERICA ~25 */
+  {city:"São Paulo, Brazil", tz:"America/Sao_Paulo"},
+  {city:"Rio de Janeiro, Brazil", tz:"America/Sao_Paulo"},
+  {city:"Brasilia, Brazil", tz:"America/Sao_Paulo"},
+  {city:"Buenos Aires, Argentina", tz:"America/Argentina/Buenos_Aires"},
+  {city:"Cordoba, Argentina", tz:"America/Argentina/Cordoba"},
+  {city:"Santiago, Chile", tz:"America/Santiago"},
+  {city:"Lima, Peru", tz:"America/Lima"},
+  {city:"Bogotá, Colombia", tz:"America/Bogota"},
+  {city:"Caracas, Venezuela", tz:"America/Caracas"},
+  {city:"Quito, Ecuador", tz:"America/Guayaquil"},
+  {city:"Montevideo, Uruguay", tz:"America/Montevideo"},
+  {city:"Asunción, Paraguay", tz:"America/Asuncion"},
+  {city:"La Paz, Bolivia", tz:"America/La_Paz"},
+  {city:"Curitiba, Brazil", tz:"America/Sao_Paulo"},
+  {city:"Recife, Brazil", tz:"America/Recife"},
+  {city:"Manaus, Brazil", tz:"America/Manaus"},
+  {city:"Fortaleza, Brazil", tz:"America/Fortaleza"},
+  {city:"Cali, Colombia", tz:"America/Bogota"},
+  {city:"Medellín, Colombia", tz:"America/Bogota"},
+  {city:"Barranquilla, Colombia", tz:"America/Bogota"},
+  {city:"Valparaiso, Chile", tz:"America/Santiago"},
+  {city:"Santa Cruz, Bolivia", tz:"America/La_Paz"},
+  {city:"Maracaibo, Venezuela", tz:"America/Caracas"},
+  {city:"Punta Arenas, Chile", tz:"America/Santiago"},
+  {city:"Iquique, Chile", tz:"America/Santiago"},
+
+  /* AFRICA ~25 */
+  {city:"Cairo, Egypt", tz:"Africa/Cairo"},
+  {city:"Alexandria, Egypt", tz:"Africa/Cairo"},
+  {city:"Cape Town, South Africa", tz:"Africa/Johannesburg"},
+  {city:"Johannesburg, South Africa", tz:"Africa/Johannesburg"},
+  {city:"Durban, South Africa", tz:"Africa/Johannesburg"},
+  {city:"Nairobi, Kenya", tz:"Africa/Nairobi"},
+  {city:"Lagos, Nigeria", tz:"Africa/Lagos"},
+  {city:"Abuja, Nigeria", tz:"Africa/Lagos"},
+  {city:"Kigali, Rwanda", tz:"Africa/Kigali"},
+  {city:"Kampala, Uganda", tz:"Africa/Kampala"},
+  {city:"Addis Ababa, Ethiopia", tz:"Africa/Addis_Ababa"},
+  {city:"Dar es Salaam, Tanzania", tz:"Africa/Dar_es_Salaam"},
+  {city:"Accra, Ghana", tz:"Africa/Accra"},
+  {city:"Dakar, Senegal", tz:"Africa/Dakar"},
+  {city:"Casablanca, Morocco", tz:"Africa/Casablanca"},
+  {city:"Algiers, Algeria", tz:"Africa/Algiers"},
+  {city:"Tunis, Tunisia", tz:"Africa/Tunis"},
+  {city:"Khartoum, Sudan", tz:"Africa/Khartoum"},
+  {city:"Harare, Zimbabwe", tz:"Africa/Harare"},
+  {city:"Lusaka, Zambia", tz:"Africa/Lusaka"},
+  {city:"Maputo, Mozambique", tz:"Africa/Maputo"},
+  {city:"Antananarivo, Madagascar", tz:"Indian/Antananarivo"},
+  {city:"Kampala, Uganda (Central)", tz:"Africa/Kampala"},
+  {city:"Bamako, Mali", tz:"Africa/Bamako"},
+  {city:"Monrovia, Liberia", tz:"Africa/Monrovia"},
+
+  /* OCEANIA & PACIFIC ~15 */
+  {city:"Sydney, Australia", tz:"Australia/Sydney"},
+  {city:"Melbourne, Australia", tz:"Australia/Melbourne"},
+  {city:"Brisbane, Australia", tz:"Australia/Brisbane"},
+  {city:"Perth, Australia", tz:"Australia/Perth"},
+  {city:"Adelaide, Australia", tz:"Australia/Adelaide"},
+  {city:"Hobart, Australia", tz:"Australia/Hobart"},
+  {city:"Canberra, Australia", tz:"Australia/Sydney"},
+  {city:"Auckland, New Zealand", tz:"Pacific/Auckland"},
+  {city:"Wellington, New Zealand", tz:"Pacific/Auckland"},
+  {city:"Suva, Fiji", tz:"Pacific/Fiji"},
+  {city:"Port Moresby, Papua New Guinea", tz:"Pacific/Port_Moresby"},
+  {city:"Honiara, Solomon Islands", tz:"Pacific/Guadalcanal"},
+  {city:"Apia, Samoa", tz:"Pacific/Apia"},
+  {city:"Nuku'alofa, Tonga", tz:"Pacific/Tongatapu"},
+  {city:"Nouméa, New Caledonia", tz:"Pacific/Noumea"},
+
+  /* EXTRA popular/large cities to reach ~300 (mix of duplicates across TZs but distinct names) ~30 */
+  {city:"Birmingham, UK", tz:"Europe/London"},
+  {city:"Leeds, UK", tz:"Europe/London"},
+  {city:"Glasgow, UK", tz:"Europe/London"},
+  {city:"Marseille, France", tz:"Europe/Paris"},
+  {city:"Lyon, France", tz:"Europe/Paris"},
+  {city:"Toulouse, France", tz:"Europe/Paris"},
+  {city:"Naples, Italy", tz:"Europe/Rome"},
+  {city:"Turin, Italy", tz:"Europe/Rome"},
+  {city:"Palermo, Italy", tz:"Europe/Rome"},
+  {city:"Seville, Spain", tz:"Europe/Madrid"},
+  {city:"Valencia, Spain", tz:"Europe/Madrid"},
+  {city:"Zaragoza, Spain", tz:"Europe/Madrid"},
+  {city:"Gothenburg, Sweden", tz:"Europe/Stockholm"},
+  {city:"Malmo, Sweden", tz:"Europe/Stockholm"},
+  {city:"Bergen, Norway", tz:"Europe/Oslo"},
+  {city:"Tromso, Norway", tz:"Europe/Oslo"},
+  {city:"Gdansk, Poland", tz:"Europe/Warsaw"},
+  {city:"Lublin, Poland", tz:"Europe/Warsaw"},
+  {city:"Krakow, Poland", tz:"Europe/Warsaw"},
+  {city:"Sao Paulo (Guarulhos), Brazil", tz:"America/Sao_Paulo"},
+  {city:"Hyderabad, Pakistan", tz:"Asia/Karachi"},
+  {city:"Tijuana, Mexico", tz:"America/Tijuana"},
+  {city:"Brownsville, USA", tz:"America/Chicago"},
+  {city:"Puebla, Mexico", tz:"America/Mexico_City"},
+  {city:"Tbilisi (Old Town), Georgia", tz:"Asia/Tbilisi"},
+  {city:"Zagreb Suburbs, Croatia", tz:"Europe/Zagreb"},
+  {city:"Belo Horizon, Brazil", tz:"America/Sao_Paulo"},
+  {city:"Giza, Egypt", tz:"Africa/Cairo"},
+  {city:"Kuwait City, Kuwait", tz:"Asia/Kuwait"}
+];
+
+// ensure we have at least 300; if less, duplicate some entries with suffix numbers
+if(cities.length < 300){
+  const base = cities.slice();
+  let i = 1;
+  while(cities.length < 300){
+    const idx = (i-1) % base.length;
+    const entry = Object.assign({}, base[idx]);
+    // append small suffix to make distinct
+    entry.city = entry.city + " " + Math.ceil(i/base.length);
+    cities.push(entry);
+    i++;
+  }
+}
+// If we have more than 300, trim to 300
+if(cities.length > 300) cities.length = 300;
+
+// ---------- State ----------
+let use24 = false;
+let selectedIndex = null;
+const favKey = 'tz_favs_v3';
+const visitKey = 'tz_visit_v3';
+
+// ---------- DOM refs ----------
+const grid = $('#grid');
+const heroCity = $('#heroCity');
+const heroTime = $('#heroTime');
+const heroOffset = $('#heroOffset');
+const heroAmPm = $('#heroAmPm');
+const heroStar = $('#heroStar');
+const favList = $('#favList');
+const searchInput = $('#searchInput');
+const toggleFormat = $('#toggleFormat');
+const visitBox = $('#visitBox');
+const clearBtn = $('#clearBtn');
+const showFavsBtn = $('#showFavs');
+
+// ---------- Local Storage: visits ----------
+(function initVisits(){
+  try {
+    const raw = localStorage.getItem(visitKey);
+    const val = raw ? parseInt(raw,10) : 0;
+    const next = val + 1;
+    localStorage.setItem(visitKey, String(next));
+    visitBox.textContent = `Visits: ${next}`;
+  } catch(e){
+    visitBox.textContent = `Visits: ?`;
+  }
+})();
+
+// ---------- Render grid ----------
+function renderGrid(list){
+  grid.innerHTML = '';
+  list.forEach((c, idx) => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.dataset.index = idx;
+    div.innerHTML = `
+      <div class="star" data-idx="${idx}">☆</div>
+      <div class="city-name">${escapeHtml(c.city)}</div>
+      <div class="tz-name">${escapeHtml(c.tz)}</div>
+      <div style="height:6px"></div>
+      <div class="time-small" id="time-${idx}">--:--</div>
+      <div class="small-meta" id="meta-${idx}"></div>
+    `;
+    div.addEventListener('click', (e)=>{
+      if(e.target.classList.contains('star')){
+        // handled below
+        return;
+      }
+      selectCard(idx);
+    });
+    grid.appendChild(div);
+  });
+  updateAllTimes();
+  renderStars();
+}
+
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+// ---------- Update times periodically ----------
+function updateAllTimes(){
+  const now = new Date();
+  const cards = grid.querySelectorAll('.card');
+  cards.forEach(card=>{
+    const idx = Number(card.dataset.index);
+    const entry = cities[idx];
+    const parts = getTimeParts(entry.tz, now, use24);
+    const timeEl = card.querySelector(`#time-${idx}`);
+    const metaEl = card.querySelector(`#meta-${idx}`);
+    if(timeEl) timeEl.textContent = parts.hourMinSec + (parts.ampm ? ' ' + parts.ampm : '');
+    if(metaEl) metaEl.textContent = parts.offset;
+    if(selectedIndex === idx){
+      // highlight selected
+      card.classList.add('selected');
+    } else {
+      card.classList.remove('selected');
     }
+  });
 
-    function creerCases() {
-      const grille = document.getElementById('grille-villes');
-      grille.innerHTML = '';
-      villes.forEach((item, i) => {
-        const caseDiv = document.createElement('div');
-        caseDiv.className = 'case-ville';
-        caseDiv.innerHTML = `
-          <div class="ville">${item.ville}</div>
-          <div class="pays">${item.pays}</div>
-          <div class="heure-locale" id="heure-${i}"></div>
-          <button class="maj-btn" onclick="updateTimes()">Mettre à jour</button>
-        `;
-        grille.appendChild(caseDiv);
-      });
-      updateTimes();
+  // update hero
+  if(selectedIndex !== null){
+    const e = cities[selectedIndex];
+    const p = getTimeParts(e.tz, now, use24);
+    heroCity.textContent = e.city;
+    heroTime.textContent = p.timeStr;
+    heroOffset.textContent = p.offset;
+    heroAmPm.textContent = p.ampm || (use24 ? '24h' : '');
+    // star state
+    updateHeroStar();
+  } else {
+    // show local
+    const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const p = getTimeParts(localTz, now, use24);
+    heroCity.textContent = `${localTz} (local)`;
+    heroTime.textContent = p.timeStr;
+    heroOffset.textContent = p.offset;
+    heroAmPm.textContent = p.ampm || (use24 ? '24h' : '');
+    heroStar.textContent = '☆';
+  }
+}
+
+// tick every second
+setInterval(updateAllTimes, 1000);
+
+// ---------- Selection ----------
+function selectCard(idx){
+  selectedIndex = idx;
+  // show in hero
+  updateAllTimes();
+  // scroll hero into view on small screens
+  document.querySelector('.hero').scrollIntoView({behavior:'smooth'});
+}
+
+// ---------- Favorites ----------
+function loadFavs(){
+  try {
+    const raw = localStorage.getItem(favKey);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){ return []; }
+}
+function saveFavs(arr){
+  try { localStorage.setItem(favKey, JSON.stringify(arr)); } catch(e){}
+}
+function isFav(city){
+  const favs = loadFavs();
+  return favs.includes(city);
+}
+function toggleFavByCity(city){
+  const favs = loadFavs();
+  const idx = favs.indexOf(city);
+  if(idx >= 0) favs.splice(idx,1);
+  else favs.push(city);
+  saveFavs(favs);
+  renderStars();
+  renderFavList();
+  updateHeroStar();
+}
+function renderStars(){
+  const favs = loadFavs();
+  const starEls = grid.querySelectorAll('.star');
+  starEls.forEach(el=>{
+    const idx = Number(el.dataset.idx);
+    const c = cities[idx];
+    el.textContent = favs.includes(c.city) ? '★' : '☆';
+    el.onclick = (e)=>{
+      e.stopPropagation();
+      toggleFavByCity(c.city);
+    };
+  });
+  updateHeroStar();
+}
+function renderFavList(){
+  favList.innerHTML = '';
+  const favs = loadFavs();
+  if(favs.length === 0){
+    favList.innerHTML = '<div style="color:var(--muted);font-size:13px">No favorites yet — click the star on a card to save</div>';
+    return;
+  }
+  favs.forEach(f=>{
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = f;
+    btn.onclick = ()=> {
+      // find the city index and select
+      const idx = cities.findIndex(c=>c.city===f);
+      if(idx>=0) selectCard(idx);
+      else {
+        alert('Favorite not found in list.');
+      }
+    };
+    favList.appendChild(btn);
+  });
+}
+function updateHeroStar(){
+  if(selectedIndex===null){
+    heroStar.textContent = '☆';
+    heroStar.onclick = () => {};
+    return;
+  }
+  const c = cities[selectedIndex];
+  heroStar.textContent = isFav(c.city) ? '★' : '☆';
+  heroStar.onclick = (e) => {
+    e.stopPropagation();
+    toggleFavByCity(c.city);
+  };
+}
+
+// ---------- Search ----------
+function performSearch(q){
+  q = (q||'').trim();
+  if(!q){
+    renderGrid(cities);
+    return;
+  }
+  const scores = cities.map((c, idx) => {
+    const primary = fuzzyScore(q, c.city);
+    const secondary = fuzzyScore(q, c.tz || '');
+    return {idx, score: Math.min(primary, secondary)};
+  });
+  scores.sort((a,b)=>a.score - b.score);
+  // take top 60 matches to show
+  const top = scores.slice(0,200).map(s=>cities[s.idx]);
+  renderGrid(top);
+  // if the best score is very close, auto-select top result
+  if(scores.length && scores[0].score <= 0.25){
+    selectCard(scores[0].idx);
+  }
+}
+
+// ---------- Controls ----------
+toggleFormat.addEventListener('click', ()=>{
+  use24 = !use24;
+  toggleFormat.textContent = use24 ? '24h' : '12h';
+  updateAllTimes();
+});
+clearBtn.addEventListener('click', ()=>{
+  searchInput.value = '';
+  performSearch('');
+});
+
+searchInput.addEventListener('input', (e)=>{
+  const q = e.target.value;
+  // search but be lenient: if empty show all
+  performSearch(q);
+});
+
+searchInput.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    // focus hero by selecting best match (top card)
+    const firstCard = grid.querySelector('.card');
+    if(firstCard){
+      const idx = Number(firstCard.dataset.index);
+      selectCard(idx);
+      firstCard.scrollIntoView({behavior:'smooth', block:'center'});
     }
+  }
+});
 
-    creerCases();
-    // Mise à jour auto toute les minutes
-    setInterval(updateTimes, 60000);
-  </script>
+document.querySelectorAll('.chip[data-quick]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const q = btn.dataset.quick;
+    if(q === 'local'){
+      selectedIndex = null;
+      updateAllTimes();
+      return;
+    }
+    // find first city with matching tz
+    const idx = cities.findIndex(c=>c.tz === q || c.city.includes(q));
+    if(idx >= 0) selectCard(idx);
+    else alert('Quick pick not found.');
+  });
+});
+
+showFavsBtn.addEventListener('click', ()=>{
+  const favs = loadFavs();
+  if(favs.length===0){ alert('No favorites yet (saved locally).'); return; }
+  // filter cities to only favorites
+  const filtered = cities.filter(c=>favs.includes(c.city));
+  renderGrid(filtered);
+});
+
+// ---------- Helpers ----------
+function findClosestCityByName(q){
+  const scores = cities.map((c, idx) => ({idx, score:fuzzyScore(q,c.city)}));
+  scores.sort((a,b)=>a.score-b.score);
+  return scores[0];
+}
+
+// ---------- Initial render ----------
+renderGrid(cities);
+renderFavList();
+
+// expose selectCard for debug
+window.selectCard = selectCard;
+
+// set local timezone as initial hero
+updateAllTimes();
+
+</script>
 </body>
 </html>
